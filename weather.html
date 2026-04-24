@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weather Live Pro</title>
+
+<style>
+body{
+  font-family: Arial, sans-serif;
+  background: linear-gradient(to bottom,#0f172a,#020617);
+  color:white;
+  text-align:center;
+  padding:30px;
+}
+.container{
+  max-width:600px;
+  margin:auto;
+}
+input{
+  padding:12px;
+  width:60%;
+  border-radius:8px;
+  border:none;
+}
+button{
+  padding:12px 18px;
+  margin:5px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  background:#38bdf8;
+}
+.card{
+  margin-top:20px;
+  padding:20px;
+  border-radius:15px;
+  background:rgba(255,255,255,0.1);
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <h1>🌦 Weather Live Pro</h1>
+
+  <input id="cityInput" placeholder="Enter city">
+  <br><br>
+
+  <button onclick="fetchWeather()">Search</button>
+  <button onclick="getLocationWeather()">📍 My Location</button>
+
+  <p id="status"></p>
+
+  <div id="weatherBox" class="card" style="display:none;"></div>
+</div>
+
+<script>
+const API_KEY = "76774352d26eb37949d4c60daa3e41af";
+
+let unit = "C";
+let weatherData = null;
+
+// 🌍 Search Weather
+async function fetchWeather(){
+  const city = document.getElementById("cityInput").value.trim();
+  if(!city){
+    setStatus("Enter a city name");
+    return;
+  }
+
+  setStatus("Loading weather...");
+
+  try{
+    const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${API_KEY}`);
+    if(!res.ok){
+      setStatus("City not found ❌");
+      return;
+    }
+
+    weatherData = await res.json();
+    displayWeather();
+
+  }catch(err){
+    setStatus("Error fetching data");
+  }
+}
+
+// 📍 Location Weather
+function getLocationWeather(){
+  if(!navigator.geolocation){
+    setStatus("Geolocation not supported");
+    return;
+  }
+
+  setStatus("Getting your location...");
+
+  navigator.geolocation.getCurrentPosition(async (pos)=>{
+    const {latitude, longitude} = pos.coords;
+
+    try{
+      const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${API_KEY}`);
+      weatherData = await res.json();
+      displayWeather();
+    }catch(err){
+      setStatus("Failed to get location weather");
+    }
+  });
+}
+
+// 🌡 Display Weather
+function displayWeather(){
+  const box = document.getElementById("weatherBox");
+  const w = weatherData;
+
+  const tempC = (w.main.temp - 273.15).toFixed(1);
+  const tempF = ((w.main.temp - 273.15)*9/5+32).toFixed(1);
+
+  const temp = unit==="C" ? tempC+"°C" : tempF+"°F";
+
+  box.style.display="block";
+
+  box.innerHTML = `
+    <h2>${w.name}</h2>
+    <h1>${temp}</h1>
+    <p>${w.weather[0].description}</p>
+    <p>Humidity: ${w.main.humidity}%</p>
+    <p>Wind: ${(w.wind.speed*3.6).toFixed(1)} km/h</p>
+    <br>
+    <button onclick="switchUnit('C')">°C</button>
+    <button onclick="switchUnit('F')">°F</button>
+  `;
+
+  setStatus("");
+  changeBackground(w.weather[0].main);
+}
+
+// 🎨 Dynamic Background
+function changeBackground(condition){
+  condition = condition.toLowerCase();
+
+  if(condition.includes("rain")){
+    document.body.style.background = "linear-gradient(#1e3a8a,#020617)";
+  }
+  else if(condition.includes("clear")){
+    document.body.style.background = "linear-gradient(#0ea5e9,#0284c7)";
+  }
+  else if(condition.includes("cloud")){
+    document.body.style.background = "linear-gradient(#334155,#020617)";
+  }
+  else{
+    document.body.style.background = "linear-gradient(#0f172a,#020617)";
+  }
+}
+
+// 🔁 Switch Unit
+function switchUnit(u){
+  unit = u;
+  displayWeather();
+}
+
+// 📢 Status
+function setStatus(msg){
+  document.getElementById("status").innerText = msg;
+}
+
+// 🔥 Default Load
+window.onload = ()=>{
+  document.getElementById("cityInput").value="London";
+  fetchWeather();
+}
+</script>
+
+</body>
+</html>
